@@ -1,0 +1,65 @@
+import bpy
+from bpy.types import Menu
+
+class VIEW3D_PIE_MT_selection_tools(Menu):
+    bl_label = "Selection Tools"
+    bl_idname = "VIEW3D_PIE_MT_selection_tools"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        
+        # Left (West)
+        box_op = pie.operator("wm.tool_set_by_id", text="Box Select", icon='SELECT_SET')
+        box_op.name = "builtin.select_box"
+        
+        # Right (East)
+        circle_op = pie.operator("wm.tool_set_by_id", text="Circle Select", icon='SELECT_SUBTRACT')
+        circle_op.name = "builtin.select_circle"
+        
+        # Bottom (South)
+        pie.separator()
+        
+        # Top (North)
+        lasso_op = pie.operator("wm.tool_set_by_id", text="Lasso Select", icon='SELECT_EXTEND')
+        lasso_op.name = "builtin.select_lasso"
+        
+        # Top-Left (Northwest)
+        pie.separator()
+        
+        # Top-Right (Northeast)
+        pie.separator()
+        
+        # Bottom-Left (Southwest)
+        pie.separator()
+        
+        # Bottom-Right (Southeast)
+        pie.separator()
+
+def register():
+    bpy.utils.register_class(VIEW3D_PIE_MT_selection_tools)
+    
+    # Create keymap
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if kc:
+        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+        kmi = km.keymap_items.new('wm.call_menu_pie', 'W', 'PRESS')
+        kmi.properties.name = "VIEW3D_PIE_MT_selection_tools"
+
+def unregister():
+    bpy.utils.unregister_class(VIEW3D_PIE_MT_selection_tools)
+    
+    # Remove keymap
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if kc:
+        km = kc.keymaps.get('3D View')
+        if km:
+            for kmi in km.keymap_items:
+                if kmi.idname == 'wm.call_menu_pie' and kmi.properties.name == "VIEW3D_PIE_MT_selection_tools":
+                    km.keymap_items.remove(kmi)
+                    break
+
+if __name__ == "__main__":
+    register()
