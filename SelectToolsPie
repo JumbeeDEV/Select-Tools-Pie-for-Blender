@@ -1,65 +1,87 @@
+bl_info = {
+    "name": "Cycle Through 3 Selection Modes", 
+    "author": "Mustafa Ayhan",
+    "version": (1, 0),
+    "blender": (5.0.1), 
+    "location": "3D View",
+    "description": "Cycle Through 3 Selection Modes",
+    "category": "3D View",
+}
+
 import bpy
-from bpy.types import Menu
+from bl_ui.space_toolsystem_common import ToolSelectPanelHelper
 
-class VIEW3D_PIE_MT_selection_tools(Menu):
-    bl_label = "Selection Tools"
-    bl_idname = "VIEW3D_PIE_MT_selection_tools"
+class VIEW3D_OT_cycle_selection_tools(bpy.types.Operator):
+    """Cycle through selection tools (Box, Lasso, Circle, Tweak)"""
+    bl_idname = "view3d.cycle_selection_tools"
+    bl_label = "Cycle Selection Tools"
+    bl_options = {'REGISTER'}
 
-    def draw(self, context):
-        layout = self.layout
-        pie = layout.menu_pie()
-        
-        # Left (West)
-        box_op = pie.operator("wm.tool_set_by_id", text="Box Select", icon='SELECT_SET')
-        box_op.name = "builtin.select_box"
-        
-        # Right (East)
-        circle_op = pie.operator("wm.tool_set_by_id", text="Circle Select", icon='SELECT_SUBTRACT')
-        circle_op.name = "builtin.select_circle"
-        
-        # Bottom (South)
-        pie.separator()
-        
-        # Top (North)
-        lasso_op = pie.operator("wm.tool_set_by_id", text="Lasso Select", icon='SELECT_EXTEND')
-        lasso_op.name = "builtin.select_lasso"
-        
-        # Top-Left (Northwest)
-        pie.separator()
-        
-        # Top-Right (Northeast)
-        pie.separator()
-        
-        # Bottom-Left (Southwest)
-        pie.separator()
-        
-        # Bottom-Right (Southeast)
-        pie.separator()
+    def execute(self, context):
+        # Define tool cycle order
+        cycle_tools = [
+            'builtin.select_box',
+            'builtin.select_circle',
+            'builtin.select_lasso',
+            #'builtin.select_tweak',
+        ]
+
+        # Get current active tool
+        current_tool = ToolSelectPanelHelper.tool_active_from_context(context)
+        current_id = current_tool.idname if current_tool else None
+
+        # Determine next tool index
+        try:
+            current_index = cycle_tools.index(current_id)
+            next_index = (current_index + 1) % len(cycle_tools)
+        except ValueError:
+            next_index = 0
+
+        # Set next tool
+        try:
+            bpy.ops.wm.tool_set_by_id(name=cycle_tools[next_index])
+        except RuntimeError:
+            self.report({'WARNING'}, "Tool unavailable in this context")
+            return {'CANCELLED'}
+
+        return {'FINISHED'}
+
+def add_keymap():
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if not kc:
+        return
+
+    km = kc.keymaps.get('3D View')
+    if not km:
+        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+
+    # Assign to Shift+Q (customize this as needed)
+    kmi = km.keymap_items.new(
+        VIEW3D_OT_cycle_selection_tools.bl_idname,
+        'W', 'PRESS', shift=False
+    )
+
+def remove_keymap():
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if not kc:
+        return
+
+    km = kc.keymaps.get('3D View')
+    if km:
+        for kmi in km.keymap_items:
+            if kmi.idname == VIEW3D_OT_cycle_selection_tools.bl_idname:
+                km.keymap_items.remove(kmi)
+                break
 
 def register():
-    bpy.utils.register_class(VIEW3D_PIE_MT_selection_tools)
-    
-    # Create keymap
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc:
-        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
-        kmi = km.keymap_items.new('wm.call_menu_pie', 'W', 'PRESS')
-        kmi.properties.name = "VIEW3D_PIE_MT_selection_tools"
+    bpy.utils.register_class(VIEW3D_OT_cycle_selection_tools)
+    add_keymap()
 
 def unregister():
-    bpy.utils.unregister_class(VIEW3D_PIE_MT_selection_tools)
-    
-    # Remove keymap
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc:
-        km = kc.keymaps.get('3D View')
-        if km:
-            for kmi in km.keymap_items:
-                if kmi.idname == 'wm.call_menu_pie' and kmi.properties.name == "VIEW3D_PIE_MT_selection_tools":
-                    km.keymap_items.remove(kmi)
-                    break
+    remove_keymap()
+    bpy.utils.unregister_class(VIEW3D_OT_cycle_selection_tools)
 
 if __name__ == "__main__":
     register()
