@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Cycle Through 3 Selection Modes", 
     "author": "Mustafa Ayhan",
-    "version": (1, 0),
-    "blender": (5.0.1), 
-    "location": "3D View",
-    "description": "Cycle Through 3 Selection Modes",
+    "version": (1, 0, 0),
+    "blender": (5, .0, 1), 
+    "location": "3D View > W Key",
+    "description": "Cycle Through Selection Tools (Box, Circle, Lasso)",
     "category": "3D View",
 }
 
@@ -12,10 +12,10 @@ import bpy
 from bl_ui.space_toolsystem_common import ToolSelectPanelHelper
 
 class VIEW3D_OT_cycle_selection_tools(bpy.types.Operator):
-    """Cycle through selection tools (Box, Lasso, Circle, Tweak)"""
+    """Cycle through selection tools (Box, Circle, Lasso)"""
     bl_idname = "view3d.cycle_selection_tools"
     bl_label = "Cycle Selection Tools"
-    bl_options = {'REGISTER'}
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         # Define tool cycle order
@@ -23,7 +23,6 @@ class VIEW3D_OT_cycle_selection_tools(bpy.types.Operator):
             'builtin.select_box',
             'builtin.select_circle',
             'builtin.select_lasso',
-            #'builtin.select_tweak',
         ]
 
         # Get current active tool
@@ -46,41 +45,26 @@ class VIEW3D_OT_cycle_selection_tools(bpy.types.Operator):
 
         return {'FINISHED'}
 
-def add_keymap():
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if not kc:
-        return
-
-    km = kc.keymaps.get('3D View')
-    if not km:
-        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
-
-    # Assign to Shift+Q (customize this as needed)
-    kmi = km.keymap_items.new(
-        VIEW3D_OT_cycle_selection_tools.bl_idname,
-        'W', 'PRESS', shift=False
-    )
-
-def remove_keymap():
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if not kc:
-        return
-
-    km = kc.keymaps.get('3D View')
-    if km:
-        for kmi in km.keymap_items:
-            if kmi.idname == VIEW3D_OT_cycle_selection_tools.bl_idname:
-                km.keymap_items.remove(kmi)
-                break
+# Global list to store keymap items
+addon_keymaps = []
 
 def register():
     bpy.utils.register_class(VIEW3D_OT_cycle_selection_tools)
-    add_keymap()
+    
+    # Keymap registration
+    wm = bpy.context.window_manager
+    kc = wm.keyconfigs.addon
+    if kc:
+        km = kc.keymaps.new(name='3D View', space_type='VIEW_3D')
+        kmi = km.keymap_items.new(VIEW3D_OT_cycle_selection_tools.bl_idname, 'W', 'PRESS')
+        addon_keymaps.append((km, kmi))
 
 def unregister():
-    remove_keymap()
+    # Keymap unregistration
+    for km, kmi in addon_keymaps:
+        km.keymap_items.remove(kmi)
+    addon_keymaps.clear()
+    
     bpy.utils.unregister_class(VIEW3D_OT_cycle_selection_tools)
 
 if __name__ == "__main__":
